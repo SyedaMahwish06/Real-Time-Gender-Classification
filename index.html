@@ -1,0 +1,232 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>GenderAI | Real-Time Detection Dashboard</title>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom Tailwind Config Override -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Mobile Menu Toggle Button -->
+    <button id="mobileMenuToggle" class="mobile-menu-btn">
+        <i class="fas fa-bars text-xl"></i>
+    </button>
+
+    <!-- Dashboard Wrapper -->
+    <div class="flex min-h-screen relative">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside id="sidebar" class="sidebar-glass">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo-icon">
+                        <i class="fas fa-brain text-white text-xl"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1>GenderAI</h1>
+                        <p>real-time intelligence</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active" data-page="live">
+                    <i class="fas fa-video"></i>
+                    <span>Live Monitor</span>
+                </a>
+                <a href="#" class="nav-link" data-page="analytics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="#" class="nav-link" data-page="history">
+                    <i class="fas fa-history"></i>
+                    <span>History Logs</span>
+                </a>
+                <a href="#" class="nav-link" data-page="security">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Security</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="model-status-card">
+                    <i class="fas fa-microchip text-2xl text-blue-400 mb-1"></i>
+                    <p class="text-xs text-gray-300">MobileNet v2 · TensorFlow</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <span class="status-badge">model active</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- Stats Cards Row -->
+            <div class="stats-grid">
+                <div class="glass-card stat-card">
+                    <div class="stat-info">
+                        <p class="stat-label">Total predictions</p>
+                        <p id="totalCountStat" class="stat-value">0</p>
+                    </div>
+                    <i class="fas fa-chart-simple stat-icon"></i>
+                </div>
+                
+                <div class="glass-card stat-card">
+                    <div class="stat-info">
+                        <p class="stat-label">Male ratio</p>
+                        <p id="maleRatioStat" class="stat-value">0%</p>
+                    </div>
+                    <i class="fas fa-mars stat-icon text-cyan-400"></i>
+                </div>
+                
+                <div class="glass-card stat-card">
+                    <div class="stat-info">
+                        <p class="stat-label">Female ratio</p>
+                        <p id="femaleRatioStat" class="stat-value">0%</p>
+                    </div>
+                    <i class="fas fa-venus stat-icon text-pink-400"></i>
+                </div>
+            </div>
+
+            <!-- Live Prediction Section -->
+            <div class="grid-2cols">
+                <!-- Camera Panel -->
+                <div class="glass-card camera-panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-camera"></i> Live Feed</h2>
+                        <div class="button-group">
+                            <button id="startCameraBtn" class="btn btn-success">
+                                <i class="fas fa-play"></i> Start
+                            </button>
+                            <button id="stopCameraBtn" class="btn btn-danger">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="video-container">
+                        <video id="webcam" autoplay playsinline muted></video>
+                        <div id="camPlaceholder" class="cam-placeholder">
+                            <i class="fas fa-video-slash text-5xl mb-3"></i>
+                            <p>Camera offline · press Start</p>
+                        </div>
+                        <div id="predictionLoader" class="prediction-loader hidden">
+                            <div class="loader-ring"></div>
+                        </div>
+                    </div>
+                    
+                    <p class="video-note">
+                        <i class="fas fa-sync-alt"></i> Frame captured & analyzed every 1.2s
+                    </p>
+                </div>
+
+                <!-- Prediction Display Panel -->
+                <div class="glass-card prediction-panel">
+                    <h2 class="panel-title">
+                        <i class="fas fa-microchip"></i> Real-Time Prediction
+                    </h2>
+                    
+                    <div id="predictionDisplay" class="prediction-content">
+                        <div class="prediction-icon">
+                            <i class="fas fa-question text-6xl text-gray-400"></i>
+                        </div>
+                        <div class="prediction-text">
+                            <p class="gender-text">—</p>
+                            <p class="confidence-text">confidence: 0%</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Confidence Bar -->
+                    <div class="confidence-section">
+                        <div class="confidence-header">
+                            <span>Confidence Score</span>
+                            <span id="confidencePercentLabel">0%</span>
+                        </div>
+                        <div class="confidence-bar-bg">
+                            <div id="confidenceBar" class="confidence-bar-fill"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="prediction-footer">
+                        <i class="fas fa-chart-line"></i>
+                        last updated: <span id="lastPredictionTime">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History & Analytics Section -->
+            <div class="grid-3cols">
+                <!-- Chart Card -->
+                <div class="glass-card chart-card">
+                    <h3><i class="fas fa-chart-pie"></i> Gender distribution</h3>
+                    <canvas id="historyChart"></canvas>
+                    <p class="chart-note">based on recent predictions</p>
+                </div>
+                
+                <!-- History Table Card -->
+                <div class="glass-card history-card">
+                    <div class="history-header">
+                        <h3><i class="fas fa-table-list"></i> Prediction history</h3>
+                        <button id="clearHistoryBtn" class="btn-clear">
+                            <i class="fas fa-trash-alt"></i> Clear
+                        </button>
+                    </div>
+                    
+                    <div class="table-wrapper">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Gender</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr>
+                                    <td colspan="3" class="text-center py-5 text-gray-400">
+                                        No predictions yet. Start camera.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <footer class="dashboard-footer">
+                AI Dashboard · Flask + TensorFlow · Real-time gender detection
+            </footer>
+        </main>
+    </div>
+
+    <!-- External JavaScript -->
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
